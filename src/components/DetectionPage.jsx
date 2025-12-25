@@ -286,29 +286,55 @@ const DetectionPage = () => {
                 </div>
               </div>
 
-              {/* Detection Details */}
+              {/* Detection Details Table */}
               {result.detections?.length > 0 && (
-                <div className="bg-slate-800/30 rounded-xl p-4">
-                  <p className="text-slate-400 text-sm mb-3">检测详情</p>
-                  <div className="max-h-48 overflow-y-auto space-y-2">
-                    {result.detections.map((det, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium flex items-center justify-center">
-                            {idx + 1}
-                          </span>
-                          <span className="text-white text-sm">{det.target}</span>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-emerald-400 text-sm font-medium">
-                            {(det.confidence * 100).toFixed(1)}%
-                          </p>
-                          <p className="text-slate-500 text-xs">
-                            ({det.center?.[0]?.toFixed(0)}, {det.center?.[1]?.toFixed(0)})
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                <div className="bg-slate-800/30 rounded-xl overflow-hidden">
+                  <div className="p-4 border-b border-slate-700/50">
+                    <p className="text-slate-400 text-sm">检测详情</p>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-800/50 sticky top-0">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">序号</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">目标</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">坐标 (X, Y)</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">置信度</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/30">
+                        {result.detections.map((det, idx) => (
+                          <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
+                            <td className="px-4 py-3">
+                              <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium flex items-center justify-center">
+                                {idx + 1}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-medium rounded-full">
+                                {det.target}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-mono text-sm text-slate-300">
+                              ({det.center?.[0]?.toFixed(0)}, {det.center?.[1]?.toFixed(0)})
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <div className="w-12 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
+                                    style={{ width: `${det.confidence * 100}%` }}
+                                  />
+                                </div>
+                                <span className="text-emerald-400 text-sm font-medium w-14 text-right">
+                                  {(det.confidence * 100).toFixed(1)}%
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}

@@ -291,6 +291,34 @@ export async function getMirrorsByZone(zone) {
 }
 
 /**
+ * Get all mirror field data for map visualization
+ * @returns {Promise<{success: boolean, total: number, mirrors: MirrorData[], center: {lat: number, lng: number}}>}
+ *
+ * @typedef {Object} MirrorData
+ * @property {string} id - Mirror ID (e.g., "00-001")
+ * @property {number} x - X coordinate in meters
+ * @property {number} y - Y coordinate in meters
+ * @property {string} z - Zone identifier (e.g., "B", "C")
+ * @property {number} c - Cleanliness percentage (0-100)
+ */
+export async function getMirrorFieldData() {
+  return fetchAPI('/mirror-field/data');
+}
+
+/**
+ * Get mirror field zones statistics
+ * @returns {Promise<{success: boolean, zones: ZoneStat[]}>}
+ *
+ * @typedef {Object} ZoneStat
+ * @property {string} zone - Zone identifier
+ * @property {number} count - Number of mirrors in zone
+ * @property {number} avg_cleanliness - Average cleanliness percentage
+ */
+export async function getMirrorFieldZones() {
+  return fetchAPI('/mirror-field/zones');
+}
+
+/**
  * API Service object with all methods
  */
 export const apiService = {
@@ -314,6 +342,8 @@ export const apiService = {
   testModbusConnection,
   importData,
   getMirrorsByZone,
+  getMirrorFieldData,
+  getMirrorFieldZones,
 
   /**
    * Test backend connection and return status

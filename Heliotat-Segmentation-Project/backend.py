@@ -33,6 +33,9 @@ TRAIN_IMAGES_PATH = Path(__file__).parent / "heliotat" / "images" / "train"
 # Settings storage file
 SETTINGS_FILE = Path(__file__).parent / "settings.json"
 
+# Mirror field data file
+MIRROR_DATA_FILE = Path(__file__).parent / "mirror_data.json"
+
 # Default settings
 DEFAULT_SETTINGS = {
     "modbus_host": "192.168.1.100",
@@ -540,6 +543,74 @@ def get_mirrors_by_zone(zone: str):
         "total_count": count,
         "mirrors": mirrors,
     })
+
+
+@app.route("/api/mirror-field/data", methods=["GET"])
+def get_mirror_field_data():
+    """Get all mirror field data for the map visualization."""
+    try:
+        if MIRROR_DATA_FILE.exists():
+            with open(MIRROR_DATA_FILE, "r") as f:
+                mirror_data = json.load(f)
+            return jsonify({
+                "success": True,
+                "total": len(mirror_data),
+                "mirrors": mirror_data,
+                "center": {"lat": 43.618492, "lng": 94.965492},
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Mirror data file not found",
+            }), 404
+    except Exception as exc:
+        return jsonify({
+            "success": False,
+            "error": str(exc),
+        }), 500
+
+
+@app.route("/api/mirror-field/zones", methods=["GET"])
+def get_mirror_field_zones():
+    """Get mirror data grouped by zones."""
+    try:
+        if MIRROR_DATA_FILE.exists():
+            with open(MIRROR_DATA_FILE, "r") as f:
+                mirror_data = json.load(f)
+
+            # Group by zone
+            zones = {}
+            for mirror in mirror_data:
+                zone = mirror.get("z", "Unknown")
+                if zone not in zones:
+                    zones[zone] = {"count": 0, "mirrors": [], "avg_cleanliness": 0, "total_c": 0}
+                zones[zone]["count"] += 1
+                zones[zone]["mirrors"].append(mirror)
+                zones[zone]["total_c"] += mirror.get("c", 0)
+
+            # Calculate averages
+            zone_stats = []
+            for zone_name, data in zones.items():
+                zone_stats.append({
+                    "zone": zone_name,
+                    "count": data["count"],
+                    "avg_cleanliness": round(data["total_c"] / data["count"], 1) if data["count"] > 0 else 0,
+                })
+
+            return jsonify({
+                "success": True,
+                "zones": zone_stats,
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Mirror data file not found",
+            }), 404
+    except Exception as exc:
+        return jsonify({
+            "success": False,
+            "error": str(exc),
+        }), 500
 
 
 if __name__ == "__main__":
