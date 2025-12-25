@@ -135,6 +135,20 @@ export async function fetchHistory({ limit = 50, search = '' } = {}) {
   return fetchAPI(`/history${queryString ? `?${queryString}` : ''}`);
 }
 
+/**
+ * Fetch all detection history for export (no limit)
+ * @param {Object} options - Query options
+ * @param {string} options.search - Filename search pattern (optional)
+ * @returns {Promise<{results: HistoryRecord[], total: number}>}
+ */
+export async function fetchHistoryForExport({ search = '' } = {}) {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+
+  const queryString = params.toString();
+  return fetchAPI(`/history/export${queryString ? `?${queryString}` : ''}`);
+}
+
 // ============== NEW API FUNCTIONS ==============
 
 /**

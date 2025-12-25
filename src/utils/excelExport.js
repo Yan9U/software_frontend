@@ -204,3 +204,163 @@ function formatDate(date) {
   const pad = (n) => String(n).padStart(2, '0');
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
 }
+
+/**
+ * Export detection results (from SQLite database) to Excel
+ * @param {Array} detectionData - Array of detection result objects from API
+ * @param {string} filename - Output filename (without extension)
+ */
+export function exportDetectionResults(detectionData, filename = 'detection-results') {
+  const headers = [
+    'ID',
+    'Filename',
+    'Target',
+    'Center X',
+    'Center Y',
+    'Confidence',
+    'Detection Time'
+  ];
+
+  const rows = detectionData.map((item, index) => [
+    item.id || index + 1,
+    item.filename || '-',
+    item.target || '-',
+    typeof item.center_x === 'number' ? item.center_x.toFixed(2) : (item.center_x || '-'),
+    typeof item.center_y === 'number' ? item.center_y.toFixed(2) : (item.center_y || '-'),
+    typeof item.confidence === 'number' ? (item.confidence * 100).toFixed(1) + '%' : (item.confidence || '-'),
+    item.time || item.created_at || '-'
+  ]);
+
+  const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+  worksheet['!cols'] = [
+    { wch: 8 },   // ID
+    { wch: 30 },  // Filename
+    { wch: 12 },  // Target
+    { wch: 12 },  // Center X
+    { wch: 12 },  // Center Y
+    { wch: 12 },  // Confidence
+    { wch: 22 }   // Detection Time
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Detection Results');
+
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  saveAs(blob, `${filename}_${formatDate(new Date())}.xlsx`);
+}
+
+/**
+ * Export user data (from localStorage) to Excel
+ * @param {string} filename - Output filename (without extension)
+ */
+export function exportUserData(filename = 'user-data') {
+  // Get users from localStorage
+  const storedUsers = localStorage.getItem('heliostat_users');
+  if (!storedUsers) {
+    console.warn('No user data found in localStorage');
+    return false;
+  }
+
+  const users = JSON.parse(storedUsers);
+
+  const headers = [
+    'Username (Login ID)',
+    'Display Name',
+    'Role',
+    'Role (Chinese)'
+  ];
+
+  const rows = Object.entries(users).map(([username, userData]) => [
+    username,
+    userData.displayName || '-',
+    userData.role || '-',
+    userData.role === 'operator' ? '操作员' : userData.role === 'developer' ? '开发人员' : '-'
+  ]);
+
+  const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+  worksheet['!cols'] = [
+    { wch: 20 },  // Username
+    { wch: 20 },  // Display Name
+    { wch: 15 },  // Role
+    { wch: 15 }   // Role (Chinese)
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  saveAs(blob, `${filename}_${formatDate(new Date())}.xlsx`);
+  return true;
+}
+
+/**
+ * Export both databases to a single Excel file with multiple sheets
+ * @param {Array} detectionData - Array of detection result objects from API
+ * @param {string} filename - Output filename (without extension)
+ */
+export function exportAllData(detectionData, filename = 'heliostat-all-data') {
+  const workbook = XLSX.utils.book_new();
+
+  // Sheet 1: Detection Results
+  const detectionHeaders = [
+    'ID',
+    'Filename',
+    'Target',
+    'Center X',
+    'Center Y',
+    'Confidence',
+    'Detection Time'
+  ];
+
+  const detectionRows = detectionData.map((item, index) => [
+    item.id || index + 1,
+    item.filename || '-',
+    item.target || '-',
+    typeof item.center_x === 'number' ? item.center_x.toFixed(2) : (item.center_x || '-'),
+    typeof item.center_y === 'number' ? item.center_y.toFixed(2) : (item.center_y || '-'),
+    typeof item.confidence === 'number' ? (item.confidence * 100).toFixed(1) + '%' : (item.confidence || '-'),
+    item.time || item.created_at || '-'
+  ]);
+
+  const detectionSheet = XLSX.utils.aoa_to_sheet([detectionHeaders, ...detectionRows]);
+  detectionSheet['!cols'] = [
+    { wch: 8 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 22 }
+  ];
+  XLSX.utils.book_append_sheet(workbook, detectionSheet, 'Detection Results');
+
+  // Sheet 2: Users
+  const storedUsers = localStorage.getItem('heliostat_users');
+  if (storedUsers) {
+    const users = JSON.parse(storedUsers);
+    const userHeaders = [
+      'Username (Login ID)',
+      'Display Name',
+      'Role',
+      'Role (Chinese)'
+    ];
+
+    const userRows = Object.entries(users).map(([username, userData]) => [
+      username,
+      userData.displayName || '-',
+      userData.role || '-',
+      userData.role === 'operator' ? '操作员' : userData.role === 'developer' ? '开发人员' : '-'
+    ]);
+
+    const userSheet = XLSX.utils.aoa_to_sheet([userHeaders, ...userRows]);
+    userSheet['!cols'] = [
+      { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }
+    ];
+    XLSX.utils.book_append_sheet(workbook, userSheet, 'Users');
+  }
+
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  saveAs(blob, `${filename}_${formatDate(new Date())}.xlsx`);
+}

@@ -208,6 +208,27 @@ def history():
     return jsonify({"results": results})
 
 
+@app.route("/api/history/export", methods=["GET"])
+def export_history():
+    """Export all detection history without limit (for Excel export)."""
+    search = request.args.get("search")
+    # Fetch all results without limit
+    rows = REPOSITORY.fetch_results(limit=10000, search=search)
+    results = [
+        {
+            "id": idx + 1,
+            "time": row["created_at"],
+            "filename": row["filename"],
+            "target": row["target"],
+            "center_x": row["center_x"],
+            "center_y": row["center_y"],
+            "confidence": row["confidence"],
+        }
+        for idx, row in enumerate(rows)
+    ]
+    return jsonify({"results": results, "total": len(results)})
+
+
 # ============== NEW API ENDPOINTS ==============
 
 @app.route("/api/mirror/image/<mirror_id>", methods=["GET"])

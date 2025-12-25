@@ -70,17 +70,115 @@ const ZONE_COLORS = {
 };
 
 // 登录页面
+// Default user data
+const DEFAULT_USERS = {
+  '01': { password: '123456', role: 'operator', displayName: '操作员' },
+  '02': { password: '123456', role: 'developer', displayName: '开发人员' },
+};
+
+// Get users from localStorage or use defaults
+const getUsers = () => {
+  const storedUsers = localStorage.getItem('heliostat_users');
+  if (storedUsers) {
+    return JSON.parse(storedUsers);
+  }
+  // Initialize with default users
+  localStorage.setItem('heliostat_users', JSON.stringify(DEFAULT_USERS));
+  return DEFAULT_USERS;
+};
+
+// Save users to localStorage
+const saveUsers = (users) => {
+  localStorage.setItem('heliostat_users', JSON.stringify(users));
+};
+
 const LoginPage = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('operator');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [signUpRole, setSignUpRole] = useState('operator');
+  const [displayName, setDisplayName] = useState('');
 
   const handleLogin = (e) => {
     e.preventDefault();
+    setError('');
+
+    // Validate that username and password are entered
+    if (!username.trim()) {
+      setError('请输入用户名');
+      return;
+    }
+    if (!password.trim()) {
+      setError('请输入密码');
+      return;
+    }
+
+    // Validate credentials
+    const users = getUsers();
+    const user = users[username];
+    if (!user || user.password !== password) {
+      setError('用户名或密码错误');
+      return;
+    }
+
     setIsLoading(true);
     setTimeout(() => {
-      onLogin({ username: username || '操作员', role });
+      onLogin({ username: user.displayName, role: user.role });
+      setIsLoading(false);
+    }, 800);
+  };
+
+  const handleSignUp = (e) => {
+    e.preventDefault();
+    setError('');
+
+    // Validate all fields
+    if (!username.trim()) {
+      setError('请输入用户名');
+      return;
+    }
+    if (!displayName.trim()) {
+      setError('请输入显示名称');
+      return;
+    }
+    if (!password.trim()) {
+      setError('请输入密码');
+      return;
+    }
+    if (password.length < 6) {
+      setError('密码长度至少6位');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('两次输入的密码不一致');
+      return;
+    }
+
+    // Check if username already exists
+    const users = getUsers();
+    if (users[username]) {
+      setError('用户名已存在');
+      return;
+    }
+
+    setIsLoading(true);
+    setTimeout(() => {
+      // Add new user
+      const newUsers = {
+        ...users,
+        [username]: {
+          password: password,
+          role: signUpRole,
+          displayName: displayName
+        }
+      };
+      saveUsers(newUsers);
+
+      // Auto login after signup
+      onLogin({ username: displayName, role: signUpRole });
       setIsLoading(false);
     }, 800);
   };
@@ -105,73 +203,167 @@ const LoginPage = ({ onLogin }) => {
           <p className="text-slate-400 mt-2 text-sm">Heliostat Cleanliness Measurement System</p>
         </div>
 
-        {/* 登录卡片 */}
+        {/* 登录/注册卡片 */}
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-8 shadow-2xl">
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">用户名</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="请输入用户名"
-                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">密码</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="请输入密码"
-                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">角色选择</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole('operator')}
-                  className={`px-4 py-3 rounded-xl border transition-all ${
-                    role === 'operator'
-                      ? 'bg-amber-500/20 border-amber-500 text-amber-400'
-                      : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
-                  }`}
-                >
-                  <User size={18} className="inline mr-2" />
-                  操作员
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('developer')}
-                  className={`px-4 py-3 rounded-xl border transition-all ${
-                    role === 'developer'
-                      ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400'
-                      : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
-                  }`}
-                >
-                  <Settings size={18} className="inline mr-2" />
-                  开发人员
-                </button>
-              </div>
-            </div>
-
+          {/* Tab切换 */}
+          <div className="flex mb-6 bg-slate-800/50 rounded-xl p-1">
             <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-400 hover:to-orange-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
+              type="button"
+              onClick={() => { setIsSignUp(false); setError(''); }}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                !isSignUp
+                  ? 'bg-amber-500 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              {isLoading ? (
-                <RefreshCw size={20} className="inline animate-spin" />
-              ) : (
-                '登 录'
-              )}
+              登录
             </button>
-          </form>
+            <button
+              type="button"
+              onClick={() => { setIsSignUp(true); setError(''); }}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                isSignUp
+                  ? 'bg-cyan-500 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              注册
+            </button>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          {!isSignUp ? (
+            /* 登录表单 */
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">用户名</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="请输入用户名"
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">密码</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="请输入密码"
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-400 hover:to-orange-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
+              >
+                {isLoading ? (
+                  <RefreshCw size={20} className="inline animate-spin" />
+                ) : (
+                  '登 录'
+                )}
+              </button>
+            </form>
+          ) : (
+            /* 注册表单 */
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">用户名</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="请输入用户名（用于登录）"
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">显示名称</label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="请输入显示名称"
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">密码</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="请输入密码（至少6位）"
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">确认密码</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="请再次输入密码"
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">角色选择</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSignUpRole('operator')}
+                    className={`px-4 py-3 rounded-xl border transition-all ${
+                      signUpRole === 'operator'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-400'
+                        : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <User size={18} className="inline mr-2" />
+                    操作员
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSignUpRole('developer')}
+                    className={`px-4 py-3 rounded-xl border transition-all ${
+                      signUpRole === 'developer'
+                        ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400'
+                        : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <Settings size={18} className="inline mr-2" />
+                    开发人员
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-xl hover:from-cyan-400 hover:to-blue-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/25"
+              >
+                {isLoading ? (
+                  <RefreshCw size={20} className="inline animate-spin" />
+                ) : (
+                  '注 册'
+                )}
+              </button>
+            </form>
+          )}
         </div>
 
         <p className="text-center text-slate-500 text-xs mt-6">

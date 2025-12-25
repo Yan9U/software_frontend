@@ -132,8 +132,8 @@ const DetectionPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Mirror Detection</h2>
-          <p className="text-slate-400 text-sm mt-1">Upload heliostat images for AI-powered cleanliness detection</p>
+          <h2 className="text-2xl font-bold text-white">定日镜检测</h2>
+          <p className="text-slate-400 text-sm mt-1">上传定日镜图像进行AI检测</p>
         </div>
         {(selectedFile || result) && (
           <button
@@ -141,7 +141,7 @@ const DetectionPage = () => {
             className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-slate-300 text-sm hover:bg-slate-700 transition-all flex items-center gap-2"
           >
             <RefreshCw size={16} />
-            Reset
+            重置
           </button>
         )}
       </div>
@@ -151,7 +151,7 @@ const DetectionPage = () => {
         <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Upload size={20} className="text-amber-400" />
-            Image Upload
+            上传图像进行检测
           </h3>
 
           {/* Drop Zone */}
@@ -193,8 +193,8 @@ const DetectionPage = () => {
                   <Camera size={28} className="text-slate-400" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">Drop image here or click to upload</p>
-                  <p className="text-slate-500 text-sm mt-1">Supports JPG, PNG, BMP (max 10MB)</p>
+                  <p className="text-white font-medium">拖拽图像到此处或点击上传</p>
+                  <p className="text-slate-500 text-sm mt-1">支持 JPG, PNG, BMP (最大 10MB)</p>
                 </div>
               </div>
             )}
@@ -210,12 +210,12 @@ const DetectionPage = () => {
               {loading ? (
                 <>
                   <Loader2 size={18} className="animate-spin" />
-                  Analyzing...
+                  分析中...
                 </>
               ) : (
                 <>
                   <Image size={18} />
-                  Start Detection
+                  开始检测
                 </>
               )}
             </button>
@@ -227,9 +227,9 @@ const DetectionPage = () => {
               <div className="flex items-start gap-3">
                 <AlertTriangle size={20} className="text-rose-400 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-rose-400 font-medium">Detection Failed</p>
+                  <p className="text-rose-400 font-medium">检测失败</p>
                   <p className="text-rose-300/70 text-sm mt-1">{error.message}</p>
-                  <p className="text-slate-500 text-xs mt-2">Make sure the backend server is running on port 5000</p>
+                  <p className="text-slate-500 text-xs mt-2">确保后端服务器在端口 5000 上运行</p>
                 </div>
               </div>
             </div>
@@ -241,7 +241,7 @@ const DetectionPage = () => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
               <CheckCircle size={20} className="text-emerald-400" />
-              Detection Results
+              检测结果
             </h3>
             {result?.annotated_image && (
               <button
@@ -249,7 +249,7 @@ const DetectionPage = () => {
                 className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-300 text-sm hover:bg-slate-700 transition-all flex items-center gap-2"
               >
                 <Download size={14} />
-                Download
+                下载图像
               </button>
             )}
           </div>
@@ -266,7 +266,7 @@ const DetectionPage = () => {
                   />
                   {result.cached && (
                     <div className="absolute top-2 right-2 px-2 py-1 bg-cyan-500/90 text-white text-xs rounded-full">
-                      Cached
+                      缓存结果
                     </div>
                   )}
                 </div>
@@ -275,11 +275,11 @@ const DetectionPage = () => {
               {/* Detection Stats */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-slate-400 text-xs mb-1">Mirrors Detected</p>
+                  <p className="text-slate-400 text-xs mb-1">定日镜数量</p>
                   <p className="text-2xl font-bold text-emerald-400">{result.detections?.length || 0}</p>
                 </div>
                 <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-slate-400 text-xs mb-1">Status</p>
+                  <p className="text-slate-400 text-xs mb-1">状态</p>
                   <p className="text-lg font-medium text-white">
                     {result.detections?.length > 0 ? 'Detected' : 'No Detection'}
                   </p>
@@ -289,7 +289,7 @@ const DetectionPage = () => {
               {/* Detection Details */}
               {result.detections?.length > 0 && (
                 <div className="bg-slate-800/30 rounded-xl p-4">
-                  <p className="text-slate-400 text-sm mb-3">Detection Details</p>
+                  <p className="text-slate-400 text-sm mb-3">检测详情</p>
                   <div className="max-h-48 overflow-y-auto space-y-2">
                     {result.detections.map((det, idx) => (
                       <div key={idx} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
@@ -318,8 +318,8 @@ const DetectionPage = () => {
               <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
                 <Image size={28} className="text-slate-500" />
               </div>
-              <p className="text-slate-400">No detection results yet</p>
-              <p className="text-slate-500 text-sm mt-1">Upload an image and click "Start Detection"</p>
+              <p className="text-slate-400">暂无检测结果</p>
+              <p className="text-slate-500 text-sm mt-1">上传图像并点击"开始检测"</p>
             </div>
           )}
         </div>
@@ -327,35 +327,35 @@ const DetectionPage = () => {
 
       {/* Instructions */}
       <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">How to Use</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">如何使用</h3>
         <div className="grid grid-cols-4 gap-4">
           <div className="text-center">
             <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
               <span className="text-amber-400 font-bold">1</span>
             </div>
-            <p className="text-slate-300 text-sm">Upload Image</p>
-            <p className="text-slate-500 text-xs mt-1">Drag & drop or click to select</p>
+            <p className="text-slate-300 text-sm">上传图像</p>
+            <p className="text-slate-500 text-xs mt-1">拖拽或点击选择</p>
           </div>
           <div className="text-center">
             <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
               <span className="text-amber-400 font-bold">2</span>
             </div>
-            <p className="text-slate-300 text-sm">Start Detection</p>
-            <p className="text-slate-500 text-xs mt-1">AI analyzes the image</p>
+            <p className="text-slate-300 text-sm">开始检测</p>
+            <p className="text-slate-500 text-xs mt-1">AI分析图像</p>
           </div>
           <div className="text-center">
             <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
               <span className="text-amber-400 font-bold">3</span>
             </div>
-            <p className="text-slate-300 text-sm">View Results</p>
-            <p className="text-slate-500 text-xs mt-1">See detected mirrors</p>
+            <p className="text-slate-300 text-sm">查看结果</p>
+            <p className="text-slate-500 text-xs mt-1">查看检测到的定日镜</p>
           </div>
           <div className="text-center">
             <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
               <span className="text-amber-400 font-bold">4</span>
             </div>
-            <p className="text-slate-300 text-sm">Download</p>
-            <p className="text-slate-500 text-xs mt-1">Save annotated image</p>
+            <p className="text-slate-300 text-sm">下载</p>
+            <p className="text-slate-500 text-xs mt-1">保存标注图像</p>
           </div>
         </div>
       </div>

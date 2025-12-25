@@ -110,8 +110,8 @@ const DetectionHistoryPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Detection History</h2>
-          <p className="text-slate-400 text-sm mt-1">View past detection results from the AI model</p>
+          <h2 className="text-2xl font-bold text-white">检测历史</h2>
+          <p className="text-slate-400 text-sm mt-1">查看AI模型的检测历史结果</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -120,7 +120,7 @@ const DetectionHistoryPage = () => {
             className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-slate-300 text-sm hover:bg-slate-700 transition-all flex items-center gap-2 disabled:opacity-50"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            Refresh
+            刷新
           </button>
           <button
             onClick={handleExport}
@@ -128,7 +128,7 @@ const DetectionHistoryPage = () => {
             className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl text-white text-sm font-medium hover:from-amber-400 hover:to-orange-400 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50"
           >
             {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            Export Excel
+            导出Excel
           </button>
         </div>
       </div>
@@ -142,7 +142,7 @@ const DetectionHistoryPage = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by filename..."
+              placeholder="通过文件名搜索..."
               className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
             />
           </div>
@@ -151,17 +151,17 @@ const DetectionHistoryPage = () => {
             onChange={(e) => setLimit(Number(e.target.value))}
             className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
           >
-            <option value={20}>20 records</option>
-            <option value={50}>50 records</option>
-            <option value={100}>100 records</option>
-            <option value={200}>200 records</option>
+            <option value={20}>20 记录</option>
+            <option value={50}>50 记录</option>
+            <option value={100}>100 记录</option>
+            <option value={200}>200 记录</option>
           </select>
           <button
             type="submit"
             className="px-4 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-400 transition-colors flex items-center gap-2"
           >
             <Filter size={16} />
-            Search
+            搜索
           </button>
         </form>
       </div>
@@ -202,12 +202,12 @@ const DetectionHistoryPage = () => {
               <table className="w-full">
                 <thead className="bg-slate-800/50">
                   <tr className="text-left">
-                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">Time</th>
-                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">Filename</th>
-                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">Target</th>
-                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">Center (X, Y)</th>
-                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">Confidence</th>
-                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">Actions</th>
+                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">时间</th>
+                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">文件名</th>
+                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">目标</th>
+                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">中心坐标 (X, Y)</th>
+                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">置信度</th>
+                    <th className="px-6 py-4 text-slate-400 font-medium text-sm">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
