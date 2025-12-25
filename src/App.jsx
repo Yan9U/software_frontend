@@ -1,11 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, AreaChart, Area } from 'recharts';
-import { Activity, Battery, MapPin, AlertTriangle, CheckCircle, Clock, Sun, Droplets, Settings, History, LayoutDashboard, Map, LogOut, User, ChevronRight, Download, Upload, Search, Filter, RefreshCw, Plane, Eye, FileText, Bell, TrendingUp, TrendingDown, Zap, Loader2 } from 'lucide-react';
+import { Activity, Battery, MapPin, AlertTriangle, CheckCircle, Clock, Sun, Droplets, Settings, History, LayoutDashboard, Map, LogOut, User, ChevronRight, Download, Upload, Search, Filter, RefreshCw, Plane, Eye, FileText, Bell, TrendingUp, TrendingDown, Zap, Loader2, Camera, Image, Wifi, WifiOff } from 'lucide-react';
 
 // Production-ready components
 import { ToastProvider, useToast } from './components/Toast';
 import { useFeatureGuard } from './components/FeatureGuard';
 import { exportZoneSummary, exportHistoryRecords, exportMirrorFieldData, exportCleanlinessAnalysis } from './utils/excelExport';
+
+// API Services and Hooks
+import { apiService, classifyImage, fetchHistory } from './services/api';
+import { useBackendConnection, useImageClassification, useDetectionHistory } from './hooks/useApi';
+import DetectionPage from './components/DetectionPage';
+import DetectionHistoryPage from './components/DetectionHistoryPage';
+import ConnectionStatus from './components/ConnectionStatus';
+
+// Backend API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 // Backend connection state (set to true when backend/MODBUS is connected)
 const BACKEND_CONNECTED = false;
@@ -178,7 +188,9 @@ const Sidebar = ({ currentPage, setCurrentPage, user, onLogout }) => {
     { id: 'dashboard', icon: LayoutDashboard, label: '系统总览' },
     { id: 'analysis', icon: Activity, label: '清洁度分析' },
     { id: 'mirrorfield', icon: Map, label: '镜场可视化' },
+    { id: 'detection', icon: Camera, label: '图像检测' },
     { id: 'history', icon: History, label: '历史记录' },
+    { id: 'detectionhistory', icon: FileText, label: '检测记录' },
     { id: 'logs', icon: FileText, label: '系统日志' },
   ];
 
@@ -199,6 +211,10 @@ const Sidebar = ({ currentPage, setCurrentPage, user, onLogout }) => {
             <p className="text-slate-500 text-xs">测量系统</p>
           </div>
         </div>
+      </div>
+
+      <div className="px-4 py-2 border-b border-slate-800">
+        <ConnectionStatus pollInterval={30000} />
       </div>
 
       {/* 导航菜单 */}
@@ -387,7 +403,6 @@ const DashboardPage = () => {
         {/* 无人机状态 */}
         <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-white mb-6">无人机状态</h3>
-          
           <div className="space-y-6">
             {/* 状态指示 */}
             <div className="flex items-center justify-center">
@@ -1321,7 +1336,6 @@ const MirrorFieldPage = () => {
               </button>
             )}
           </div>
-          
           {/* 颜色模式 */}
           <div className="flex items-center bg-slate-800 border border-slate-700 rounded-xl p-1">
             <button onClick={() => setColorMode('cleanliness')}
@@ -1333,7 +1347,6 @@ const MirrorFieldPage = () => {
               分区
             </button>
           </div>
-          
           {/* 缩放 */}
           <div className="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-xl p-1">
             <button onClick={() => setZoom(z => Math.max(0.2, z * 0.8))} className="p-1.5 text-slate-400 hover:text-white">
@@ -1344,7 +1357,6 @@ const MirrorFieldPage = () => {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg>
             </button>
           </div>
-          
           <button onClick={resetView} className="p-2 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:text-white transition-colors" title="重置视图">
             <RefreshCw size={18} />
           </button>
@@ -1385,7 +1397,6 @@ const MirrorFieldPage = () => {
               ))}
             </div>
           </div>
-          
           <div className="border-t border-slate-800 pt-4">
             <h3 className="text-sm font-semibold text-white mb-3">图例</h3>
             <div className="space-y-2 text-xs">
@@ -1407,14 +1418,12 @@ const MirrorFieldPage = () => {
             onMouseLeave={handleMouseUp}
             onClick={handleClick}
             className="absolute inset-0 cursor-grab active:cursor-grabbing" />
-          
           {/* 小地图 */}
           {showMinimap && (
             <div className="absolute top-4 right-4 bg-slate-900/90 border border-slate-700 rounded-lg p-2 shadow-xl">
               <canvas id="minimap-canvas" width="150" height="120" className="rounded" />
             </div>
           )}
-          
           {/* 选中镜子信息 */}
           {selectedMirror && (
             <div className="absolute bottom-4 left-4 bg-slate-900/95 border border-slate-700 rounded-xl p-4 shadow-xl w-64">
@@ -1436,7 +1445,6 @@ const MirrorFieldPage = () => {
               </button>
             </div>
           )}
-          
           {/* 悬停提示 */}
           {hoveredMirror && !selectedMirror && (
             <div className="absolute pointer-events-none bg-slate-800/95 border border-slate-600 rounded-lg px-3 py-2 text-xs shadow-lg"
@@ -1448,13 +1456,11 @@ const MirrorFieldPage = () => {
               <span style={{ color: ZONE_COLORS[hoveredMirror.z].bg }}>{ZONE_COLORS[hoveredMirror.z].name}</span>
             </div>
           )}
-          
           {searchResult && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/90 text-white px-4 py-2 rounded-lg text-sm shadow-lg">
               已定位到 {searchResult.id}
             </div>
           )}
-          
           {/* 操作提示 */}
           <div className="absolute bottom-4 right-4 text-slate-500 text-xs bg-slate-900/80 px-3 py-1.5 rounded-lg">
             滚轮缩放 · 拖拽平移 · 点击选择
@@ -1872,7 +1878,9 @@ function AppContent() {
       case 'dashboard': return <DashboardPage />;
       case 'analysis': return <AnalysisPage />;
       case 'mirrorfield': return <MirrorFieldPage />;
+      case 'detection': return <DetectionPage />;
       case 'history': return <HistoryPage />;
+      case 'detectionhistory': return <DetectionHistoryPage />;
       case 'logs': return <LogsPage />;
       case 'settings': return <SettingsPage />;
       default: return <DashboardPage />;

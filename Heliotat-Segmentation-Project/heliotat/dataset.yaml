@@ -1,0 +1,7 @@
+path: /home/alen/ultralytics/datasets/heliotat
+train: images/train
+val: images/val
+test:
+
+names:
+    0: mirror
