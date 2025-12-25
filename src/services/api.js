@@ -135,6 +135,147 @@ export async function fetchHistory({ limit = 50, search = '' } = {}) {
   return fetchAPI(`/history${queryString ? `?${queryString}` : ''}`);
 }
 
+// ============== NEW API FUNCTIONS ==============
+
+/**
+ * Get mirror image URL (for display in modal)
+ * @param {string} mirrorId - The mirror ID
+ * @returns {string} - Image URL
+ */
+export function getMirrorImageUrl(mirrorId) {
+  return `${API_BASE_URL}/mirror/image/${encodeURIComponent(mirrorId)}`;
+}
+
+/**
+ * Get random mirror image URL
+ * @returns {string} - Image URL
+ */
+export function getRandomImageUrl() {
+  return `${API_BASE_URL}/mirror/image/random?t=${Date.now()}`;
+}
+
+/**
+ * Get dashboard statistics
+ */
+export async function getDashboardStats() {
+  return fetchAPI('/dashboard/stats');
+}
+
+/**
+ * Refresh dashboard data
+ */
+export async function refreshDashboard() {
+  return fetchAPI('/dashboard/refresh', { method: 'POST' });
+}
+
+/**
+ * Get drone status
+ */
+export async function getDroneStatus() {
+  return fetchAPI('/drone/status');
+}
+
+/**
+ * Start drone inspection
+ */
+export async function startInspection(zones = '全场') {
+  return fetchAPI('/drone/inspection/start', {
+    method: 'POST',
+    body: JSON.stringify({ zones }),
+  });
+}
+
+/**
+ * Stop drone inspection
+ */
+export async function stopInspection() {
+  return fetchAPI('/drone/inspection/stop', { method: 'POST' });
+}
+
+/**
+ * Get zone statistics
+ */
+export async function getZoneStats() {
+  return fetchAPI('/zones/stats');
+}
+
+/**
+ * Get cleanliness history for charts
+ */
+export async function getCleanlinessHistory(days = 30) {
+  return fetchAPI(`/cleanliness/history?days=${days}`);
+}
+
+/**
+ * Get system alerts
+ */
+export async function getAlerts() {
+  return fetchAPI('/alerts');
+}
+
+/**
+ * Get inspection records
+ */
+export async function getInspectionRecords() {
+  return fetchAPI('/inspection/records');
+}
+
+/**
+ * Filter inspection records
+ */
+export async function filterInspectionRecords(filters) {
+  return fetchAPI('/inspection/filter', {
+    method: 'POST',
+    body: JSON.stringify(filters),
+  });
+}
+
+/**
+ * Get settings
+ */
+export async function getSettings() {
+  return fetchAPI('/settings');
+}
+
+/**
+ * Save settings
+ */
+export async function saveSettings(settings) {
+  return fetchAPI('/settings', {
+    method: 'POST',
+    body: JSON.stringify(settings),
+  });
+}
+
+/**
+ * Test MODBUS connection
+ */
+export async function testModbusConnection(host, port) {
+  return fetchAPI('/settings/test-connection', {
+    method: 'POST',
+    body: JSON.stringify({ host, port }),
+  });
+}
+
+/**
+ * Import data from file
+ */
+export async function importData(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return fetchAPI('/data/import', {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+/**
+ * Get mirrors by zone
+ */
+export async function getMirrorsByZone(zone) {
+  return fetchAPI(`/mirrors/${zone}`);
+}
+
 /**
  * API Service object with all methods
  */
@@ -142,6 +283,23 @@ export const apiService = {
   checkHealth,
   classifyImage,
   fetchHistory,
+  getMirrorImageUrl,
+  getRandomImageUrl,
+  getDashboardStats,
+  refreshDashboard,
+  getDroneStatus,
+  startInspection,
+  stopInspection,
+  getZoneStats,
+  getCleanlinessHistory,
+  getAlerts,
+  getInspectionRecords,
+  filterInspectionRecords,
+  getSettings,
+  saveSettings,
+  testModbusConnection,
+  importData,
+  getMirrorsByZone,
 
   /**
    * Test backend connection and return status

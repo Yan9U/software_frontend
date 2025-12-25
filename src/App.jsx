@@ -8,7 +8,7 @@ import { useFeatureGuard } from './components/FeatureGuard';
 import { exportZoneSummary, exportHistoryRecords, exportMirrorFieldData, exportCleanlinessAnalysis } from './utils/excelExport';
 
 // API Services and Hooks
-import { apiService, classifyImage, fetchHistory } from './services/api';
+import { apiService, classifyImage, fetchHistory, refreshDashboard, startInspection, filterInspectionRecords, testModbusConnection, saveSettings, importData } from './services/api';
 import { useBackendConnection, useImageClassification, useDetectionHistory } from './hooks/useApi';
 import DetectionPage from './components/DetectionPage';
 import DetectionHistoryPage from './components/DetectionHistoryPage';
@@ -304,22 +304,27 @@ const DashboardPage = () => {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Simulate refresh delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsRefreshing(false);
-    if (BACKEND_CONNECTED) {
+    try {
+      await refreshDashboard();
       toast.success('Data refreshed successfully');
-    } else {
-      toast.warning('Refresh: Function not ready, please wait!');
+    } catch (error) {
+      toast.error('Refresh failed: ' + error.message);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
-  const handleStartInspection = () => {
-    if (!BACKEND_CONNECTED) {
-      toast.warning('Start Inspection: Function not ready, please wait!');
-      return;
+  const handleStartInspection = async () => {
+    setIsRefreshing(true);
+    try {
+      const result = await startInspection('全场');
+      setDroneStatus(prev => ({...prev, status: '巡检中', progress: 0}));
+      toast.success('Inspection started successfully');
+    } catch (error) {
+      toast.error('Failed to start inspection: ' + error.message);
+    } finally {
+      setIsRefreshing(false);
     }
-    toast.success('Inspection started');
   };
 
   return (
@@ -572,11 +577,19 @@ const AnalysisPage = () => {
     }
   };
 
-  // Import handler - requires backend
-  const handleImportRecords = () => {
-    if (!BACKEND_CONNECTED) {
-      toast.warning('Import Records: Function not ready, please wait!');
+  // Import handler - now functional
+  const fileInputRef = useRef(null);
+  const handleImportRecords = async (e) => {
+    const file = e?.target?.files?.[0];
+    if (!file) {
+      fileInputRef.current?.click();
       return;
+    }
+    try {
+      const result = await importData(file);
+      toast.success(result.message || 'Records imported successfully');
+    } catch (error) {
+      toast.error('Import failed: ' + error.message);
     }
   };
 
@@ -818,6 +831,7 @@ const ImagePreviewModal = ({ mirror, onClose, sampleImageUrl }) => {
                   loading="lazy"
                   decoding="async"
                   onLoad={() => setImageLoaded(true)}
+                  onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect fill='%231e293b' width='400' height='300'/%3E%3Ctext fill='%2394a3b8' font-family='sans-serif' font-size='16' x='50%25' y='50%25' text-anchor='middle'%3EImage not available%3C/text%3E%3C/svg%3E"; setImageLoaded(true); }}
                   className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
                 {/* 图片信息叠加层 */}
@@ -954,7 +968,8 @@ const MirrorFieldPage = () => {
   const [previewMirror, setPreviewMirror] = useState(null);
 
   // 示例图片URL
-  const SAMPLE_IMAGE_URL = "heliostat-sample.jpg";
+  // Use backend API for mirror images
+  const getMirrorImageUrl = (mirrorId) => `http://localhost:5000/api/mirror/image/${encodeURIComponent(mirrorId)}`;
 
   // Export mirror field data to Excel - FUNCTIONAL
   const handleExportMirrorData = async () => {
@@ -1479,7 +1494,7 @@ const MirrorFieldPage = () => {
             y: previewMirror.y
           }}
           onClose={() => setPreviewMirror(null)}
-          sampleImageUrl={SAMPLE_IMAGE_URL}
+          sampleImageUrl={getMirrorImageUrl(previewMirror.id)}
         />
       )}
     </div>
@@ -1506,11 +1521,23 @@ const HistoryPage = () => {
     }
   };
 
-  // Filter handler - requires backend
-  const handleFilter = () => {
-    if (!BACKEND_CONNECTED) {
-      toast.warning('Filter: Function not ready, please wait!');
-      return;
+  // Filter handler - now functional
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedZone, setSelectedZone] = useState('全部区域');
+  const [records, setRecords] = useState(historyRecords);
+  
+  const handleFilter = async () => {
+    try {
+      const result = await filterInspectionRecords({
+        search: searchTerm,
+        zone: selectedZone,
+      });
+      if (result.records) {
+        setRecords(result.records);
+      }
+      toast.success('Filter applied');
+    } catch (error) {
+      toast.error('Filter failed: ' + error.message);
     }
   };
 
@@ -1701,18 +1728,40 @@ const LogsPage = () => {
 const SettingsPage = () => {
   const toast = useToast();
 
-  // All settings actions require backend
-  const handleTestConnection = () => {
-    if (!BACKEND_CONNECTED) {
-      toast.warning('Test Connection: Function not ready, please wait!');
-      return;
+  // Settings state
+  const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [modbusHost, setModbusHost] = useState('192.168.1.100');
+  const [modbusPort, setModbusPort] = useState('502');
+  
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    try {
+      const result = await testModbusConnection(modbusHost, parseInt(modbusPort));
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.warning(result.message);
+      }
+    } catch (error) {
+      toast.error('Connection test failed: ' + error.message);
+    } finally {
+      setIsTesting(false);
     }
   };
 
-  const handleSaveThresholds = () => {
-    if (!BACKEND_CONNECTED) {
-      toast.warning('Save Settings: Function not ready, please wait!');
-      return;
+  const handleSaveThresholds = async () => {
+    setIsSaving(true);
+    try {
+      await saveSettings({
+        modbus_host: modbusHost,
+        modbus_port: parseInt(modbusPort),
+      });
+      toast.success('Settings saved successfully');
+    } catch (error) {
+      toast.error('Save failed: ' + error.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
