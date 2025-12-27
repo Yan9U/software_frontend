@@ -1,71 +1,42 @@
 #!/bin/bash
-# Deployment script for Heliostat project to Aliyun server
-# Usage: ./deploy.sh
+# Heliostat Detection System - Quick Deploy Script
+# Run this script on your server after uploading the files
 
-SERVER="root@8.163.8.214"
-REMOTE_DIR="/var/www/heliostat"
+set -e
 
-echo "=========================================="
-echo "  Heliostat Project Deployment Script"
-echo "=========================================="
+echo "=== Heliostat Detection System Deployment ==="
 
-# Step 1: Upload backend files
-echo ""
-echo "[1/4] Uploading backend files..."
-rsync -avz --progress \
-    --exclude '__pycache__' \
-    --exclude '*.pyc' \
-    --exclude 'venv' \
-    ../Heliotat-Segmentation-Project/ \
-    $SERVER:$REMOTE_DIR/backend/
-
-# Step 2: Upload frontend build
-echo ""
-echo "[2/4] Uploading frontend files..."
-rsync -avz --progress \
-    ../dist/ \
-    $SERVER:$REMOTE_DIR/frontend/
-
-# Step 3: Upload config files
-echo ""
-echo "[3/4] Uploading configuration files..."
-scp heliostat.nginx.conf $SERVER:/etc/nginx/sites-available/heliostat
-scp heliostat.service $SERVER:/etc/systemd/system/heliostat.service
-
-# Step 4: Remote setup
-echo ""
-echo "[4/4] Running remote setup..."
-ssh $SERVER << 'ENDSSH'
-    set -e
-
-    echo "Installing system dependencies..."
-    apt-get update
-    apt-get install -y python3 python3-pip python3-venv nginx
-
-    echo "Setting up Python virtual environment..."
-    cd /var/www/heliostat/backend
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install --upgrade pip
-    pip install -r requirements.txt
-
-    echo "Configuring Nginx..."
-    ln -sf /etc/nginx/sites-available/heliostat /etc/nginx/sites-enabled/
-    rm -f /etc/nginx/sites-enabled/default
-    nginx -t
-
-    echo "Starting services..."
-    systemctl daemon-reload
-    systemctl enable heliostat
-    systemctl restart heliostat
-    systemctl restart nginx
-
-    echo "Checking service status..."
-    systemctl status heliostat --no-pager
-ENDSSH
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$SCRIPT_DIR/backend"
+FRONTEND_DIR="$SCRIPT_DIR/frontend"
 
 echo ""
-echo "=========================================="
-echo "  Deployment Complete!"
-echo "  Access your app at: http://8.163.8.214"
-echo "=========================================="
+echo "1. Setting up Python virtual environment..."
+cd "$BACKEND_DIR"
+python3 -m venv venv
+source venv/bin/activate
+
+echo ""
+echo "2. Installing Python dependencies..."
+pip install --upgrade pip
+pip install -r requirements.txt
+
+echo ""
+echo "3. Testing backend..."
+python -c "from backend import app; print('Backend loaded successfully!')"
+
+echo ""
+echo "4. Starting backend server..."
+echo "   Backend will run on http://0.0.0.0:5000"
+echo ""
+echo "   To run in background:"
+echo "   nohup gunicorn -w 2 -b 0.0.0.0:5000 backend:app --timeout 120 > backend.log 2>&1 &"
+echo ""
+echo "   For development/testing:"
+echo "   python backend.py"
+echo ""
+echo "5. Frontend files are in: $FRONTEND_DIR"
+echo "   Configure your web server (nginx/apache) to serve from this directory"
+echo ""
+echo "=== Deployment preparation complete! ==="

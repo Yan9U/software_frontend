@@ -20,6 +20,7 @@ from ultralytics import YOLO
 from werkzeug.utils import secure_filename
 
 from database import ResultRepository
+from mysql_database import get_mysql_repository, MYSQL_AVAILABLE
 
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp"}
@@ -62,6 +63,23 @@ if not WEIGHTS_PATH.exists():
 
 MODEL = YOLO(str(WEIGHTS_PATH))
 REPOSITORY = ResultRepository(Path("classification_results.db"))
+
+# MySQL repository (optional - falls back to simulated data if not available)
+MYSQL_REPO = None
+if MYSQL_AVAILABLE:
+    try:
+        MYSQL_REPO = get_mysql_repository()
+        conn_test = MYSQL_REPO.test_connection()
+        if conn_test.get("success"):
+            print(f"✓ MySQL connected: {conn_test.get('version')}")
+        else:
+            print(f"✗ MySQL connection failed: {conn_test.get('error')}")
+            MYSQL_REPO = None
+    except Exception as e:
+        print(f"✗ MySQL not available: {e}")
+        MYSQL_REPO = None
+else:
+    print("ℹ MySQL connector not installed, using simulated data")
 
 
 def _allowed_file(filename: str) -> bool:
@@ -270,7 +288,13 @@ def get_random_image():
 @app.route("/api/dashboard/stats", methods=["GET"])
 def get_dashboard_stats():
     """Get dashboard statistics."""
-    # Simulated real-time stats
+    # Try to get real data from MySQL
+    if MYSQL_REPO:
+        stats = MYSQL_REPO.get_dashboard_stats()
+        if stats:
+            return jsonify(stats)
+
+    # Fallback to simulated data
     return jsonify({
         "total_mirrors": 14500,
         "avg_cleanliness": round(random.uniform(85, 92), 1),
@@ -350,6 +374,41 @@ def stop_inspection():
 @app.route("/api/zones/stats", methods=["GET"])
 def get_zone_stats():
     """Get zone statistics with cleanliness data."""
+    # Try to get real data from MySQL
+    if MYSQL_REPO:
+        zone_counts = MYSQL_REPO.get_heliostat_count_by_zone()
+        cleanliness_data = MYSQL_REPO.get_latest_cleanliness_by_zone()
+
+        if zone_counts:
+            # Create a map of cleanliness by zone
+            cleanliness_map = {z["zone"]: z for z in cleanliness_data} if cleanliness_data else {}
+
+            zones = []
+            for zc in zone_counts:
+                zone_name = zc["zone"]
+                count = zc["count"]
+                cl_data = cleanliness_map.get(zone_name, {})
+                cleanliness = round(float(cl_data.get("avg_cleanliness", 0.85)) * 100, 1)
+
+                # Determine status
+                if cleanliness >= 90:
+                    status = "good"
+                elif cleanliness >= 80:
+                    status = "warning"
+                else:
+                    status = "critical"
+
+                zones.append({
+                    "zone": f"{zone_name}区",
+                    "count": count,
+                    "cleanliness": cleanliness,
+                    "status": status,
+                })
+
+            if zones:
+                return jsonify({"zones": zones})
+
+    # Fallback to simulated data
     zones = [
         {"zone": "A区", "count": 3647, "cleanliness": round(random.uniform(88, 95), 1), "status": "good"},
         {"zone": "B区", "count": 3563, "cleanliness": round(random.uniform(82, 90), 1), "status": "warning"},
@@ -611,6 +670,170 @@ def get_mirror_field_zones():
             "success": False,
             "error": str(exc),
         }), 500
+
+
+# ==================== MySQL-based API Endpoints ====================
+
+@app.route("/api/db/status", methods=["GET"])
+def get_db_status():
+    """Check MySQL database connection status."""
+    if MYSQL_REPO:
+        result = MYSQL_REPO.test_connection()
+        return jsonify({
+            "mysql_available": True,
+            "connected": result.get("success", False),
+            "version": result.get("version"),
+            "message": result.get("message") or result.get("error"),
+        })
+    return jsonify({
+        "mysql_available": MYSQL_AVAILABLE,
+        "connected": False,
+        "message": "MySQL connector not installed" if not MYSQL_AVAILABLE else "Not connected",
+    })
+
+
+@app.route("/api/heliostats", methods=["GET"])
+def get_heliostats():
+    """Get all heliostat data."""
+    if MYSQL_REPO:
+        limit = request.args.get("limit", type=int)
+        heliostats = MYSQL_REPO.get_all_heliostats(limit=limit)
+        return jsonify({
+            "success": True,
+            "total": len(heliostats),
+            "heliostats": heliostats,
+        })
+    return jsonify({"success": False, "error": "MySQL not available"}), 503
+
+
+@app.route("/api/heliostats/zone/<zone>", methods=["GET"])
+def get_heliostats_by_zone(zone: str):
+    """Get heliostats by zone."""
+    if MYSQL_REPO:
+        heliostats = MYSQL_REPO.get_heliostats_by_zone(zone.upper())
+        return jsonify({
+            "success": True,
+            "zone": zone.upper(),
+            "total": len(heliostats),
+            "heliostats": heliostats,
+        })
+    return jsonify({"success": False, "error": "MySQL not available"}), 503
+
+
+@app.route("/api/flights", methods=["GET"])
+def get_flights():
+    """Get flight records."""
+    if MYSQL_REPO:
+        limit = request.args.get("limit", 50, type=int)
+        flights = MYSQL_REPO.get_flight_records(limit=limit)
+        return jsonify({
+            "success": True,
+            "total": len(flights),
+            "flights": flights,
+        })
+    return jsonify({"success": False, "error": "MySQL not available"}), 503
+
+
+@app.route("/api/flights/<int:flight_id>", methods=["GET"])
+def get_flight_detail(flight_id: int):
+    """Get flight detail with inspections."""
+    if MYSQL_REPO:
+        flight = MYSQL_REPO.get_flight_record_by_id(flight_id)
+        if flight:
+            inspections = MYSQL_REPO.get_inspection_by_flight(flight_id)
+            return jsonify({
+                "success": True,
+                "flight": flight,
+                "inspections": inspections,
+                "inspection_count": len(inspections),
+            })
+        return jsonify({"success": False, "error": "Flight not found"}), 404
+    return jsonify({"success": False, "error": "MySQL not available"}), 503
+
+
+@app.route("/api/inspections", methods=["GET"])
+def get_inspections():
+    """Get inspection records."""
+    if MYSQL_REPO:
+        limit = request.args.get("limit", 100, type=int)
+        inspections = MYSQL_REPO.get_inspection_records(limit=limit)
+        return jsonify({
+            "success": True,
+            "total": len(inspections),
+            "inspections": inspections,
+        })
+    return jsonify({"success": False, "error": "MySQL not available"}), 503
+
+
+@app.route("/api/inspections/heliostat/<int:heliostat_id>", methods=["GET"])
+def get_heliostat_inspections(heliostat_id: int):
+    """Get inspection history for a specific heliostat."""
+    if MYSQL_REPO:
+        limit = request.args.get("limit", 10, type=int)
+        inspections = MYSQL_REPO.get_inspection_by_heliostat(heliostat_id, limit=limit)
+        return jsonify({
+            "success": True,
+            "heliostat_id": heliostat_id,
+            "inspections": inspections,
+        })
+    return jsonify({"success": False, "error": "MySQL not available"}), 503
+
+
+@app.route("/api/logs", methods=["GET"])
+def get_system_logs():
+    """Get system logs."""
+    if MYSQL_REPO:
+        limit = request.args.get("limit", 50, type=int)
+        log_type = request.args.get("type")
+        logs = MYSQL_REPO.get_logs(limit=limit, log_type=log_type)
+        return jsonify({
+            "success": True,
+            "total": len(logs),
+            "logs": logs,
+        })
+    return jsonify({"success": False, "error": "MySQL not available"}), 503
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def login():
+    """User login endpoint."""
+    data = request.get_json() or {}
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"success": False, "error": "Username and password required"}), 400
+
+    if MYSQL_REPO:
+        user = MYSQL_REPO.authenticate_user(username, password)
+        if user:
+            return jsonify({
+                "success": True,
+                "user": user,
+                "message": "Login successful",
+            })
+        return jsonify({"success": False, "error": "Invalid credentials"}), 401
+
+    # Fallback: simple check for demo
+    if username == "admin" and password == "admin":
+        return jsonify({
+            "success": True,
+            "user": {"username": "admin", "role": "管理员"},
+            "message": "Login successful (demo mode)",
+        })
+    return jsonify({"success": False, "error": "Invalid credentials"}), 401
+
+
+@app.route("/api/users", methods=["GET"])
+def get_users():
+    """Get all users (admin only)."""
+    if MYSQL_REPO:
+        users = MYSQL_REPO.get_all_users()
+        return jsonify({
+            "success": True,
+            "users": users,
+        })
+    return jsonify({"success": False, "error": "MySQL not available"}), 503
 
 
 if __name__ == "__main__":
